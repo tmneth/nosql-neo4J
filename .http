@@ -1,0 +1,14 @@
+#  Surasti esybes pagal savybę
+GET http://localhost:8080/person/John
+
+###
+
+GET http://localhost:8080/person/region/P001/regions
+
+###
+
+GET http://localhost:8080/related-persons/P001/5
+
+###
+
+GET http://localhost:8080/closest-relative/P002?region=Nordic%20Region
