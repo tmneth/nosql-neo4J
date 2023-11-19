@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,77 +20,81 @@ func main() {
 
 	r := gin.Default()
 
-		r.GET("/person/:name", func(c *gin.Context) {
-			name := c.Param("name")
-			record, err := GetPersonByName(ctx, Driver, name)
+
+		r.GET("/stop/:id", func(c *gin.Context) {
+			stopID := c.Param("id")
+			record, err := GetStopById(ctx, Driver, stopID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 			if record == nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Person not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Bus stop not found"})
 				return
 			}
 			c.JSON(http.StatusOK, record)
 		})
 
-		r.GET("/person/region/:person_id/regions", func(c *gin.Context) {
-			personID := c.Param("person_id")
-			records, err := GetRegionsByPersonID(ctx, Driver, personID)
+		r.GET("/stop/:id/routes", func(c *gin.Context) {
+			stopID := c.Param("id")
+			records, err := getStopRoutes(ctx, Driver, stopID)
+
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			if len(records) == 0 {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Routes not found"})
+				return
+			}
+			c.JSON(http.StatusOK, records)
+		})
+
+
+		r.GET("/all_routes/:start_stop_id/:end_stop_id", func(c *gin.Context) {
+			startStopID := c.Param("start_stop_id")
+			endStopID := c.Param("end_stop_id")
+			records, err := getAllRoutesBetweenStops(ctx, Driver, startStopID, endStopID)
 			fmt.Print(records)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 			if len(records) == 0 {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Regions not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Routes not found"})
 				return
 			}
 			c.JSON(http.StatusOK, records)
 		})
 
-		r.GET("/related-persons/:personID/:degree", func(c *gin.Context) {
-			personID := c.Param("personID")
-			degree, err := strconv.Atoi(c.Param("degree"))
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid degree parameter"})
-				return
-			}
-	
-			relatedPersons, err := GetAllRelatedPersons(ctx, Driver, personID, degree)
+		r.GET("/optimal_route/:start_stop_id/:end_stop_id", func(c *gin.Context) {
+			startStopID := c.Param("start_stop_id")
+			endStopID := c.Param("end_stop_id")
+			records, err := getShortestPathByBus(ctx, Driver, startStopID, endStopID)
+			fmt.Print(records)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			if len(relatedPersons) == 0 {
-				c.JSON(http.StatusNotFound, gin.H{"error": "No related persons found"})
+			if len(records) == 0 {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Route not found"})
 				return
 			}
-			c.JSON(http.StatusOK, gin.H{"related_persons": relatedPersons})
+			c.JSON(http.StatusOK, records)
 		})
 
-			r.GET("/closest-relative/:personID", func(c *gin.Context) {
-				personID := c.Param("personID")
-
-				regionName := c.DefaultQuery("region", "") 
-		
-				if regionName == "" {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Region name is required as a query parameter"})
-					return
-				}
-		
-				relative, err := GetClosestRelativeFromRegion(ctx, Driver, personID, regionName)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					return
-				}
-				if relative == nil {
-					c.JSON(http.StatusNotFound, gin.H{"error": "No closest relative found"})
-					return
-				}
-				c.JSON(http.StatusOK, relative)
-			})
-		
+		r.GET("/stops_by_route", func(c *gin.Context) {
+			record, err := GetStopsByRoute(ctx, Driver)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			if record == nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Bus stop not found"})
+				return
+			}
+			c.JSON(http.StatusOK, record)
+		})
 
 	r.Run()
 }

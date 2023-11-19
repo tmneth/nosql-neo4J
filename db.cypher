@@ -1,32 +1,67 @@
-// Create Service Providers
-CREATE (sp1:ServiceProvider {provider_id: 'SP001', name: 'TeleFast', service_area: 'North Region'})
-CREATE (sp2:ServiceProvider {provider_id: 'SP002', name: 'QuickCall', service_area: 'South Region'})
+MATCH (n) DETACH DELETE n;
 
-// Create Cell Towers
-CREATE (ct1:CellTower {tower_id: 'CT001', location: 'LocationA', capacity: 100, operational_status: 'Active'})
-CREATE (ct2:CellTower {tower_id: 'CT002', location: 'LocationB', capacity: 150, operational_status: 'Active'})
-CREATE (ct3:CellTower {tower_id: 'CT003', location: 'LocationC', capacity: 80, operational_status: 'Maintenance'})
+CREATE 
+    (s1:Stop {stop_id: 'S001', name: 'Rygos st.'}),
+    (s2:Stop {stop_id: 'S002', name: 'Čiobiškio st.'}),
+    (s3:Stop {stop_id: 'S003', name: 'Vilniaus rajono poliklinika'}),
+    (s4:Stop {stop_id: 'S004', name: 'Žemynos st.'}),
+    (s5:Stop {stop_id: 'S005', name: 'Kaimelio st.'}),
+    (s6:Stop {stop_id: 'S006', name: 'Liudo Giros st.'}),
+    (s7:Stop {stop_id: 'S007', name: 'Mykolo Romerio universitetas'}),
+    (s8:Stop {stop_id: 'S008', name: 'Jurgio Baltrušaičio st.'}),
+    (s9:Stop {stop_id: 'S009', name: 'Antano Jonyno st.'}),
+    (s10:Stop {stop_id: 'S010', name: 'Buivydiškių st.'}),
+    (s11:Stop {stop_id: 'S011', name: 'Dūkštų st.'}),
 
-// Create Data Centers
-CREATE (dc1:DataCenter {center_id: 'DC001', location: 'Central Hub', max_load: 1000, power_backup_status: 'Yes'})
-CREATE (dc2:DataCenter {center_id: 'DC002', location: 'Backup Site', max_load: 500, power_backup_status: 'No'})
+    (r1:Route {route_id: 'R001', name: '2G'}),
+    (r2:Route {route_id: 'R002', name: '55'}),
+    (r3:Route {route_id: 'R003', name: '43'}),
 
-// Create Customers
-CREATE (c1:Customer {customer_id: 'C001', name: 'John Doe', address: '123 Main St'})
-CREATE (c2:Customer {customer_id: 'C002', name: 'Jane Smith', address: '456 Broad Ave'})
-CREATE (c3:Customer {customer_id: 'C003', name: 'Alice Johnson', address: '789 Oak Ln'})
+    (v1:Vehicle {vehicle_id: 'V001', type: 'Bus', capacity: 50}),
+    (v2:Vehicle {vehicle_id: 'V002', type: 'Bus', capacity: 75}),
+    (v3:Vehicle {vehicle_id: 'V003', type: 'Bus', capacity: 100}),
 
-// Create Relationships between Service Providers and Cell Towers
-CREATE (sp1)-[:USES]->(ct1)
-CREATE (sp1)-[:USES]->(ct2)
-CREATE (sp2)-[:USES]->(ct3)
+    (d1:Driver {driver_id: 'D001', name: 'Jonathan'}),
+    (d2:Driver {driver_id: 'D002', name: 'Richard'}),
+    (d3:Driver {driver_id: 'D003', name: 'Michael'}),
 
-// Create Relationships between Cell Towers and Data Centers
-CREATE (ct1)-[:CONNECTS_TO {bandwidth: '10Gbps'}]->(dc1)
-CREATE (ct2)-[:CONNECTS_TO {bandwidth: '1Gbps'}]->(dc1)
-CREATE (ct3)-[:CONNECTS_TO {bandwidth: '100Mbps'}]->(dc2)
+    (s1)-[:SEGMENT {distance: 200, duration: 2.0}]->(s2),
+    (s1)-[:SEGMENT {distance: 200, duration: 2.0}]->(s10),
+    (s2)-[:SEGMENT {distance: 721, duration: 3.5}]->(s3),
+    (s3)-[:SEGMENT {distance: 1300, duration: 5}]->(s4),
+    (s4)-[:SEGMENT {distance: 1300, duration: 5}]->(s5),
+    (s5)-[:SEGMENT {distance: 1300, duration: 5}]->(s6),
+    (s4)-[:SEGMENT {distance: 500, duration: 3}]->(s8),
+    (s8)-[:SEGMENT {distance: 500, duration: 3}]->(s5),
+    (s5)-[:SEGMENT {distance: 500, duration: 3}]->(s9),
+    (s9)-[:SEGMENT {distance: 500, duration: 3}]->(s6),
+    (s6)-[:SEGMENT {distance: 500, duration: 3}]->(s7),
+    (s10)-[:SEGMENT {distance: 200, duration: 2.0}]->(s11),
 
-// Create Relationships between Customers and Service Providerst
-CREATE (c1)-[:SUBSCRIBED_TO]->(sp1)
-CREATE (c2)-[:SUBSCRIBED_TO]->(sp1)
-CREATE (c3)-[:SUBSCRIBED_TO]->(sp2)
+    (s1)-[:SERVICED_BY]->(r1),
+    (s1)-[:SERVICED_BY]->(r2),
+    (s1)-[:SERVICED_BY]->(r3),
+    (s2)-[:SERVICED_BY]->(r1),
+    (s2)-[:SERVICED_BY]->(r2),
+    (s3)-[:SERVICED_BY]->(r1),
+    (s3)-[:SERVICED_BY]->(r2),
+    (s4)-[:SERVICED_BY]->(r1),
+    (s4)-[:SERVICED_BY]->(r2),
+    (s5)-[:SERVICED_BY]->(r1),
+    (s5)-[:SERVICED_BY]->(r2),
+    (s6)-[:SERVICED_BY]->(r1),
+    (s6)-[:SERVICED_BY]->(r2),
+    (s7)-[:SERVICED_BY]->(r1),
+    (s7)-[:SERVICED_BY]->(r2),
+    (s8)-[:SERVICED_BY]->(r2),
+    (s9)-[:SERVICED_BY]->(r2),
+    (s10)-[:SERVICED_BY]->(r3),
+    (s11)-[:SERVICED_BY]->(r3),
+
+    (v1)-[:ASSIGNED_TO]->(r1),
+    (v2)-[:ASSIGNED_TO]->(r2),
+    (v3)-[:ASSIGNED_TO]->(r3),
+
+    (v1)-[:OPERATED_BY]->(d1),
+    (v2)-[:OPERATED_BY]->(d2),
+    (v3)-[:OPERATED_BY]->(d3);

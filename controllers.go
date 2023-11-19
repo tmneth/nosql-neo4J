@@ -3,17 +3,19 @@ package main
 import (
 	"context"
 
+	"fmt"
+
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 
-func GetPersonByName(ctx context.Context, driver neo4j.DriverWithContext, name string) (*neo4j.Record, error) {
+func GetStopById(ctx context.Context, driver neo4j.DriverWithContext, stopID string) (*neo4j.Record, error) {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{})
 	defer session.Close(ctx)
 
-	query := "MATCH (p:Person {name: $name}) RETURN p"
+	query := "MATCH (s:Stop {stop_id: $stopID}) RETURN s"
 	parameters := map[string]any{
-		"name": name,
+		"stopID": stopID,
 	}
 
 	result, err := session.Run(ctx, query, parameters)
@@ -33,13 +35,50 @@ func GetPersonByName(ctx context.Context, driver neo4j.DriverWithContext, name s
 	return nil, nil
 }
 
-func GetRegionsByPersonID(ctx context.Context, driver neo4j.DriverWithContext, personID string) ([]*neo4j.Record, error) {
+
+func getStopRoutes(ctx context.Context, driver neo4j.DriverWithContext, stopID string) ([]*neo4j.Record, error)  {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{})
 	defer session.Close(ctx)
 
-	query := "MATCH (p:Person {person_id: $personID})-[:FROM_REGION]->(r:Region) RETURN r"
+    query := "MATCH(s:Stop {stop_id: $stopID})-[:SERVICED_BY]->(r:Route) RETURN r"
+    parameters := map[string]any{
+		"stopID": stopID,
+	}
+
+    result, err := session.Run(ctx, query, parameters)
+	if err != nil {
+		return nil, err
+	}
+
+	var records []*neo4j.Record
+	for result.Next(ctx) {
+		record := result.Record()
+		records = append(records, record)
+	}
+
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
+
+	return records, nil
+
+
+}
+
+func getAllRoutesBetweenStops(ctx context.Context, driver neo4j.DriverWithContext, startStopID string, endStopID string) ([]*neo4j.Record, error) {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{})
+	defer session.Close(ctx)
+
+	query := `
+    MATCH (start:Stop {stop_id: $startStopID}), (end:Stop {stop_id: $endStopID})
+    MATCH path = (start)-[:SERVICED_BY|SEGMENT*]-(end)
+    WITH [r in nodes(path) WHERE 'Route' in labels(r)] as routes
+    UNWIND routes as route
+    RETURN DISTINCT route.name as RouteName    
+	`
 	parameters := map[string]any{
-		"personID": personID,
+		"startStopID": startStopID,
+		"endStopID":   endStopID,
 	}
 
 	result, err := session.Run(ctx, query, parameters)
@@ -60,91 +99,63 @@ func GetRegionsByPersonID(ctx context.Context, driver neo4j.DriverWithContext, p
 	return records, nil
 }
 
-func GetAllRelatedPersons(ctx context.Context, driver neo4j.DriverWithContext, personID string, degree int) ([]map[string]interface{}, error) {
-    session := driver.NewSession(ctx, neo4j.SessionConfig{})
-    defer session.Close(ctx)
+func getShortestPathByBus(ctx context.Context, driver neo4j.DriverWithContext, startStopID string, endStopID string) ([]*neo4j.Record, error)  {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{})
+	defer session.Close(ctx)
 
-    query := `
-    MATCH path = (startPerson:Person {person_id: $personID})-[:RELATED_TO*]-(relatedPerson:Person)
-    WHERE startPerson <> relatedPerson AND length(path) <= $degree
-    RETURN relatedPerson AS person, length(path) AS degree
+	query := `
+	MATCH (start:Stop {stop_id: $startStopID}), (end:Stop {stop_id: $endStopID})
+	CALL apoc.algo.dijkstra(start, end, 'SEGMENT>', 'distance') 
+	YIELD path, weight
+	RETURN nodes(path) AS nodePath, weight AS totalDistance 
     `
-    parameters := map[string]interface{}{
-        "personID": personID,
-        "degree":   degree,
-    }
+	parameters := map[string]any{
+		"startStopID": startStopID,
+		"endStopID":   endStopID,
+	}
 
     result, err := session.Run(ctx, query, parameters)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    var relatedPersons []map[string]interface{}
-    for result.Next(ctx) {
-        record := result.Record()
-        personNode, _ := record.Get("person")
-        person, _ := personNode.(neo4j.Node)
-        relDegree, _ := record.Get("degree")
+  
+	var records []*neo4j.Record
+	for result.Next(ctx) {
+		record := result.Record()
+		records = append(records, record)
+	}
+    fmt.Print(result)
 
-        relatedPersons = append(relatedPersons, map[string]interface{}{
-            "related_person": map[string]interface{}{
-                "person_id": person.Props["person_id"],
-                "name":      person.Props["name"],
-            },
-            "degree": relDegree,
-        })
-    }
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
 
-    if err := result.Err(); err != nil {
-        return nil, err
-    }
-
-    return relatedPersons, nil
+	return records, nil
 }
 
 
-func GetClosestRelativeFromRegion(ctx context.Context, driver neo4j.DriverWithContext, personID, regionName string) (map[string]interface{}, error) {
-    session := driver.NewSession(ctx, neo4j.SessionConfig{})
-    defer session.Close(ctx)
+func GetStopsByRoute(ctx context.Context, driver neo4j.DriverWithContext)  ([]*neo4j.Record, error) {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{})
+	defer session.Close(ctx)
 
-    query := `
-	MATCH (person:Person {person_id: $personID}),
-	(region:Region {name: $regionName}),
-	path = (person)-[:RELATED_TO*]-(relative:Person)
-	WHERE (relative)-[:FROM_REGION]->(region)
-	RETURN relative, length(path) as degreesOfSeparation
-	ORDER BY degreesOfSeparation ASC
-	LIMIT 1
+	query := `MATCH (r:Route)-[:SERVICED_BY]-(s:Stop)
+    RETURN r.name AS Route, count(DISTINCT s) AS NumberOfStops`
 
-    `
-    parameters := map[string]interface{}{
-        "personID":   personID,
-        "regionName": regionName,
-    }
+    result, err := session.Run(ctx, query, nil)
+	if err != nil {
+		return nil, err
+	}
 
-    result, err := session.Run(ctx, query, parameters)
-    if err != nil {
-        return nil, err
-    }
+	var records []*neo4j.Record
+	for result.Next(ctx) {
+		record := result.Record()
+		records = append(records, record)
+	}
 
-    if result.Next(ctx) {
-        record := result.Record()
-        relativeNode, _ := record.Get("relative")
-        relative, _ := relativeNode.(neo4j.Node)
-        degreesOfSeparation, _ := record.Get("degreesOfSeparation")
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
 
-        return map[string]interface{}{
-            "relative": map[string]interface{}{
-                "person_id": relative.Props["person_id"],
-                "name":      relative.Props["name"],
-            },
-            "degreesOfSeparation": degreesOfSeparation,
-        }, nil
-    }
-
-    if err := result.Err(); err != nil {
-        return nil, err
-    }
-
-    return nil, nil
+	return records, nil
 }
