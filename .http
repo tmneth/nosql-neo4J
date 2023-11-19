@@ -12,7 +12,7 @@ GET http://localhost:8080/stop/S001/routes
 
 # Surasti esybes susietas giliais sąryšiais
 # Find all routes between two stops
-GET http://localhost:8080/all_routes/S001/S010
+GET http://localhost:8080/all_routes/S001/S007
 
 ###
 
