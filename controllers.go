@@ -8,7 +8,7 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
-func GetStopById(ctx context.Context, driver neo4j.DriverWithContext, stopID string) (map[string]interface{}, error) {
+func getStopById(ctx context.Context, driver neo4j.DriverWithContext, stopID string) (map[string]interface{}, error) {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{})
 	defer session.Close(ctx)
 
@@ -82,6 +82,41 @@ func getStopRoutes(ctx context.Context, driver neo4j.DriverWithContext, stopID s
 	return routes, nil
 }
 
+func getStopsByRoute(ctx context.Context, driver neo4j.DriverWithContext, routeID string) ([]map[string]interface{}, error) {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{})
+	defer session.Close(ctx)
+
+	query := `
+	MATCH (route:Route {route_id: $routeID})<-[:SERVICED_BY]-(stop:Stop)
+	RETURN stop.name AS name, stop.stop_id AS stop_id
+	`
+	parameters := map[string]any{
+		"routeID": routeID,
+	}
+
+	result, err := session.Run(ctx, query, parameters)
+	if err != nil {
+		return nil, err
+	}
+
+	var stops []map[string]interface{}
+	for result.Next(ctx) {
+		record := result.Record()
+		stopName, _ := record.Get("name")
+		stopID, _ := record.Get("stop_id")
+		stops = append(stops, map[string]interface{}{
+			"name":    stopName,
+			"stop_id": stopID,
+		})
+	}
+
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
+
+	return stops, nil
+}
+
 func getAllRoutesBetweenStops(ctx context.Context, driver neo4j.DriverWithContext, startStopID string, endStopID string) ([]map[string]interface{}, error) {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{})
 	defer session.Close(ctx)
@@ -124,7 +159,7 @@ func getShortestPathByBus(ctx context.Context, driver neo4j.DriverWithContext, s
 
 	query := `
     MATCH (start:Stop {stop_id: $startStopID}), (end:Stop {stop_id: $endStopID})
-    CALL apoc.algo.dijkstra(start, end, 'SEGMENT>', 'distance') 
+    CALL apoc.algo.dijkstra(start, end, 'SEGMENT', 'distance') 
     YIELD path, weight
     UNWIND nodes(path) AS n
     RETURN weight AS totalDistance, COLLECT({name: n.name, stop_id: n.stop_id}) AS Stops
@@ -160,7 +195,7 @@ func getShortestPathByBus(ctx context.Context, driver neo4j.DriverWithContext, s
 	return nil, fmt.Errorf("no path found between stop IDs %s and %s", startStopID, endStopID)
 }
 
-func GetStopsByRoute(ctx context.Context, driver neo4j.DriverWithContext) ([]map[string]interface{}, error) {
+func getStopsCountByRoute(ctx context.Context, driver neo4j.DriverWithContext) ([]map[string]interface{}, error) {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{})
 	defer session.Close(ctx)
 

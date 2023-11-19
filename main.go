@@ -22,13 +22,13 @@ func main() {
 
 	r.GET("/stop/:id", func(c *gin.Context) {
 		stopID := c.Param("id")
-		record, err := GetStopById(ctx, Driver, stopID)
+		record, err := getStopById(ctx, Driver, stopID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		if record == nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Bus stop not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "Buss stop not found"})
 			return
 		}
 		c.JSON(http.StatusOK, record)
@@ -44,6 +44,21 @@ func main() {
 		}
 		if len(records) == 0 {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Routes not found"})
+			return
+		}
+		c.JSON(http.StatusOK, records)
+	})
+
+	r.GET("/route/:id/stops", func(c *gin.Context) {
+		routeID := c.Param("id")
+		records, err := getStopsByRoute(ctx, Driver, routeID)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if len(records) == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Stops not found"})
 			return
 		}
 		c.JSON(http.StatusOK, records)
@@ -82,7 +97,7 @@ func main() {
 	})
 
 	r.GET("/stops_by_route", func(c *gin.Context) {
-		record, err := GetStopsByRoute(ctx, Driver)
+		record, err := getStopsCountByRoute(ctx, Driver)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
