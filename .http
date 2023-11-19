@@ -8,16 +8,16 @@ GET http://localhost:8080/stop/S001
 #  Find all routes of a bus stop
 GET http://localhost:8080/stop/S001/routes
 
-###
+###s
 
 # Surasti esybes susietas giliais sąryšiais
 # Find all routes between two stops
-GET http://localhost:8080/all_routes/S001/S007
+GET http://localhost:8080/all_routes/S001/S006
 
 ###
 
 # Surasti trumpiausią kelią įvertinant svorius
-# Find best route to get from one stop to another
+# Find best route sto get from one stop to another
 GET http://localhost:8080/optimal_route/S001/S008
 
 ###
