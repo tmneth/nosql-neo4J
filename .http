@@ -31,3 +31,9 @@ GET http://localhost:8080/optimal_route/S001/S007
 # Agreguojami duomenys 
 # Find number of stops each route has
 GET http://localhost:8080/stops_by_route
+
+###
+
+# Agreguojami duomenys 
+# Find number total length of a route
+GET http://localhost:8080/route/R001/total_distance

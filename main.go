@@ -109,5 +109,19 @@ func main() {
 		c.JSON(http.StatusOK, record)
 	})
 
+	r.GET("/route/:id/total_distance", func(c *gin.Context) {
+		routeID := c.Param("id")
+		routeInfo, err := calculateTotalDistance(ctx, Driver, routeID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if routeInfo == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Route stop not found"})
+			return
+		}
+		c.JSON(http.StatusOK, routeInfo)
+	})
+
 	r.Run()
 }

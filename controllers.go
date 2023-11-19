@@ -159,6 +159,7 @@ func getShortestPathByBus(ctx context.Context, driver neo4j.DriverWithContext, s
 
 	query := `
     MATCH (start:Stop {stop_id: $startStopID}), (end:Stop {stop_id: $endStopID})
+	WHERE start <> end
     CALL apoc.algo.dijkstra(start, end, 'SEGMENT', 'distance') 
     YIELD path, weight
     UNWIND nodes(path) AS n
@@ -226,4 +227,44 @@ func getStopsCountByRoute(ctx context.Context, driver neo4j.DriverWithContext) (
 	}
 
 	return routes, nil
+}
+
+func calculateTotalDistance(ctx context.Context, driver neo4j.DriverWithContext, routeID string) (map[string]interface{}, error) {
+	session := driver.NewSession(ctx, neo4j.SessionConfig{})
+	defer session.Close(ctx)
+
+	query := `
+		MATCH (route:Route {route_id: $routeID})
+		MATCH (stop1:Stop)-[seg:SEGMENT]->(stop2:Stop)
+		WHERE (stop1)-[:SERVICED_BY]->(route) AND (stop2)-[:SERVICED_BY]->(route)
+		RETURN route.name AS routeName, SUM(seg.distance) AS totalDistance
+    `
+	parameters := map[string]interface{}{"routeID": routeID}
+
+	result, err := session.Run(ctx, query, parameters)
+	if err != nil {
+		return nil, err
+	}
+
+	if result.Next(ctx) {
+		record := result.Record()
+		totalDistance, ok := record.Get("totalDistance")
+		if !ok {
+			return nil, fmt.Errorf("totalDistance not found in the record")
+		}
+		routeName, ok := record.Get("routeName")
+		if !ok {
+			return nil, fmt.Errorf("routeName not found in the record")
+		}
+		return map[string]interface{}{
+			"route_name":     routeName,
+			"total_distance": totalDistance,
+		}, nil
+	}
+
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
+
+	return nil, fmt.Errorf("no route found with route_id: %s", routeID)
 }
