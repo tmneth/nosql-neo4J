@@ -12,14 +12,13 @@ GET http://localhost:8080/stop/S001/routes
 
 #  Surasti esybes pagal ryšį 
 #  Find all stops of a route
-GET http://localhost:8080/route/R001/stops
+GET http://localhost:8080/route/R002/stops
 
-###s
+###
 
 # Surasti esybes susietas giliais sąryšiais
 # Find all routes between two stops
-GET http://localhost:8080/all_routes/S010/S001
-
+GET http://localhost:8080/all_routes/S001/S005
 ###
 
 # Surasti trumpiausią kelią įvertinant svorius
@@ -36,4 +35,4 @@ GET http://localhost:8080/stops_by_route
 
 # Agreguojami duomenys 
 # Find number total length of a route
-GET http://localhost:8080/route/R001/total_distance
+GET http://localhost:8080/route/R002/total_distance

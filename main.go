@@ -67,7 +67,7 @@ func main() {
 	r.GET("/all_routes/:start_stop_id/:end_stop_id", func(c *gin.Context) {
 		startStopID := c.Param("start_stop_id")
 		endStopID := c.Param("end_stop_id")
-		records, err := getAllRoutesBetweenStops(ctx, Driver, startStopID, endStopID)
+		records, err := getAllPathsBetweenStops(ctx, Driver, startStopID, endStopID)
 		fmt.Print(records)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
