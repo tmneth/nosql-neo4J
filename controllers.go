@@ -31,7 +31,7 @@ func getStopById(ctx context.Context, driver neo4j.DriverWithContext, stopID str
 			return nil, fmt.Errorf("name not found in the record")
 		}
 		stop = map[string]interface{}{
-			"name":    name,
+			"name": name,
 		}
 	} else {
 		if err := result.Err(); err != nil {
@@ -113,47 +113,46 @@ func getStopsByRoute(ctx context.Context, driver neo4j.DriverWithContext, routeI
 }
 
 func getAllPathsBetweenStops(ctx context.Context, driver neo4j.DriverWithContext, startStopID string, endStopID string) ([]map[string]interface{}, error) {
-    session := driver.NewSession(ctx, neo4j.SessionConfig{})
-    defer session.Close(ctx)
+	session := driver.NewSession(ctx, neo4j.SessionConfig{})
+	defer session.Close(ctx)
 
-    query := `
+	query := `
     MATCH p = (start:Stop {stop_id: $startStopID})-[:SEGMENT*]-(end:Stop {stop_id: $endStopID})
 	WHERE start <> end
     UNWIND nodes(p) AS stop
     WITH p, COLLECT(stop) AS stops
     RETURN [stop IN stops | {name: stop.name, stop_id: stop.stop_id}] AS StopList
     `
-    parameters := map[string]any{
-        "startStopID": startStopID,
-        "endStopID":   endStopID,
-    }
+	parameters := map[string]any{
+		"startStopID": startStopID,
+		"endStopID":   endStopID,
+	}
 
-    result, err := session.Run(ctx, query, parameters)
-    if err != nil {
-        return nil, err
-    }
+	result, err := session.Run(ctx, query, parameters)
+	if err != nil {
+		return nil, err
+	}
 
-    var paths []map[string]interface{}
-    for result.Next(ctx) {
-        record := result.Record()
-        stopList, _ := record.Get("StopList")
-        path := map[string]interface{}{
-            "Stops": stopList,
-        }
-        paths = append(paths, path)
-    }
+	var paths []map[string]interface{}
+	for result.Next(ctx) {
+		record := result.Record()
+		stopList, _ := record.Get("StopList")
+		path := map[string]interface{}{
+			"Stops": stopList,
+		}
+		paths = append(paths, path)
+	}
 
-    if err := result.Err(); err != nil {
-        return nil, err
-    }
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
 
-    if len(paths) == 0 {
-        return nil, fmt.Errorf("no path found between stop IDs %s and %s", startStopID, endStopID)
-    }
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("no path found between stop IDs %s and %s", startStopID, endStopID)
+	}
 
-    return paths, nil
+	return paths, nil
 }
-
 
 func getShortestPathByBus(ctx context.Context, driver neo4j.DriverWithContext, startStopID string, endStopID string) (map[string]interface{}, error) {
 	session := driver.NewSession(ctx, neo4j.SessionConfig{})
